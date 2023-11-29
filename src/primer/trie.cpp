@@ -1,4 +1,5 @@
 #include "primer/trie.h"
+#include <memory>
 #include <string_view>
 #include "common/exception.h"
 
@@ -12,6 +13,30 @@ auto Trie::Get(std::string_view key) const -> const T * {
   // nullptr. After you find the node, you should use `dynamic_cast` to cast it to `const TrieNodeWithValue<T> *`. If
   // dynamic_cast returns `nullptr`, it means the type of the value is mismatched, and you should return nullptr.
   // Otherwise, return the value.
+  if (root_ == nullptr) {
+    return nullptr;
+  }
+
+  std::shared_ptr<const TrieNode> cur = root_->Clone();
+
+  for (char c : key) {
+    auto children = cur->children_;
+    auto it = children.find(c);
+    if (it == children.end()) {
+      return nullptr;
+    }
+    cur = it->second;
+  }
+
+  if (!(cur->is_value_node_)) {
+    return nullptr;
+  }
+
+  auto value_node = dynamic_cast<const TrieNodeWithValue<T> *>(cur.get());
+  if (value_node == nullptr) {
+    return nullptr;
+  }
+  return value_node->value_.get();
 }
 
 template <class T>
@@ -21,6 +46,25 @@ auto Trie::Put(std::string_view key, T value) const -> Trie {
 
   // You should walk through the trie and create new nodes if necessary. If the node corresponding to the key already
   // exists, you should create a new `TrieNodeWithValue`.
+  
+  auto copy = Trie();
+  copy.root_ = root_->Clone();
+  std::shared_ptr<const TrieNode> cur = copy.root_;
+  for (char c : key) {
+    auto children = cur -> children_;
+    auto it = children.find(c);
+    if (it == children.end()) {
+      auto new_node = std::make_shared<const TrieNode>();
+      children.insert(std::make_pair(c, new_node));
+      cur = new_node;
+    } else {
+      cur = it->second;
+    }
+  }
+
+  auto value_node = std::make_shared<const TrieNodeWithValue<T>>(std::move(value));
+  cur = value_node;
+  return copy;
 }
 
 auto Trie::Remove(std::string_view key) const -> Trie {
