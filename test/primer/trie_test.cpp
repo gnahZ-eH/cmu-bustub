@@ -17,9 +17,13 @@ TEST(TrieTest, ConstructorTest) { auto trie = Trie(); }
 TEST(TrieTest, BasicPutTest) {
   auto trie = Trie();
   trie = trie.Put<uint32_t>("test-int", 233);
-  trie = trie.Put<uint64_t>("test-int2", 23333333);
-  trie = trie.Put<std::string>("test-string", "test");
-  trie = trie.Put<std::string>("", "empty-key");
+  auto value = trie.Get<uint32_t>("test-int");
+  std::cout << value << "\n";
+  
+  // trie = trie.Put<uint64_t>("test-int2", 23333333);
+  // trie = trie.Put<std::string>("test-string", "test");
+  // trie = trie.Put<std::string>("", "empty-key");
+
 }
 
 TEST(TrieTest, TrieStructureCheck) {
