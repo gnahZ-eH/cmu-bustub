@@ -57,24 +57,19 @@ auto Trie::Put(std::string_view key, T value) const -> Trie {
     auto cursor = copy_trie.root_;
     for (int i = 0; i < static_cast<int>(key.size() - 1); i++) {
       char c = key[i];
-      auto children = cursor -> children_;
-
-      if (children.find(c) == children.end()) {
+      if (cursor -> children_.find(c) == cursor -> children_.end()) {
         // Not find, create a new node
         std::map<char, std::shared_ptr<const TrieNode>> empty_map;
         auto new_node = std::make_shared<TrieNode>();
         new_node->children_ = empty_map;
-        children[c] = std::move(new_node);
+        const_cast<TrieNode *>(cursor.get())->children_[c] = std::move(new_node);
       }
-
-      cursor = children[c];
+      cursor = cursor -> children_.at(c);
     }
 
     char last_c = key[key.size() - 1];
-    auto children = cursor -> children_;
-    
     auto new_value_node = std::make_shared<TrieNodeWithValue<T>>(std::make_shared<T>(std::move(value)));
-    children[last_c] = std::move(new_value_node);
+    const_cast<TrieNode *>(cursor.get())->children_[last_c] = std::move(new_value_node);
     return copy_trie;
   }
 
@@ -84,37 +79,39 @@ auto Trie::Put(std::string_view key, T value) const -> Trie {
 
   for (int i = 0; i < static_cast<int>(key.size() - 1); i++) {
     char c = key[i];
-    auto children = cursor -> children_;
-    auto copy_children = copy_cursor -> children_;
+    //auto children = cursor -> children_;
+    //auto copy_children = copy_cursor -> children_;
 
-    if (children.find(c) == children.end()) {
+    if (cursor == nullptr || cursor -> children_.find(c) == cursor -> children_.end()) {
       // Not find, create a new node
       std::map<char, std::shared_ptr<const TrieNode>> empty_map;
       auto new_node = std::make_shared<TrieNode>();
       new_node->children_ = empty_map;
-      copy_children[c] = std::move(new_node);
+      const_cast<TrieNode *>(copy_cursor.get())->children_[c] = std::move(new_node);
     } else {
       // Find the node, need to create a copy if existing one
-      auto copy_node = children[c]->Clone();
-      copy_children[c] = std::move(copy_node);
+      auto copy_node = const_cast<TrieNode *>(cursor.get())->children_[c]->Clone();
+      const_cast<TrieNode *>(copy_cursor.get())->children_[c] = std::move(copy_node);
     }
 
-    cursor = children[c];
-    copy_cursor = copy_children[c];
+    cursor = (cursor == nullptr || cursor->children_.find(c) == cursor->children_.end()) ? nullptr : cursor -> children_.at(c);
+    copy_cursor = copy_cursor -> children_.at(c);
   }
 
   char last_c = key[key.size() - 1];
-  auto children = cursor -> children_;
-  auto copy_children = copy_cursor -> children_;
-  if (children.find(last_c) == children.end()) {
+  //auto children = cursor -> children_;
+  //auto copy_children = copy_cursor -> children_;
+  if (cursor == nullptr || cursor -> children_.find(last_c) == cursor -> children_.end()) {
     // Not find, create a new value node
     auto new_node = std::make_shared<TrieNodeWithValue<T>>(std::make_shared<T>(std::move(value)));
-    copy_children[last_c] = std::move(new_node);
+    const_cast<TrieNode *>(copy_cursor.get())->children_[last_c] = std::move(new_node);
   } else {
     // Find the node, update its value
-    auto copy_node = children[last_c]->Clone();
+    auto copy_node = const_cast<TrieNode *>(cursor.get())->children_[last_c]->Clone();
     auto value_node = dynamic_cast<TrieNodeWithValue<T> *>(copy_node.get());
     value_node->value_ = std::make_shared<T>(std::move(value));
+    // hezhang TODO: value_node?
+    const_cast<TrieNode *>(copy_cursor.get())->children_[last_c] = std::move(copy_node);
   }
   return copy_trie;
 }
