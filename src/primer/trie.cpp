@@ -68,9 +68,14 @@ auto Trie::Put(std::string_view key, T value) const -> Trie {
       cursor = cursor -> children_.at(c);
     }
 
-    char last_c = key[key.size() - 1];
     auto new_value_node = std::make_shared<TrieNodeWithValue<T>>(shared_value);
-    const_cast<TrieNode *>(cursor.get())->children_[last_c] = std::move(new_value_node);
+    if (!key.empty()) {
+      char last_c = key[key.size() - 1];
+      
+      const_cast<TrieNode *>(cursor.get())->children_[last_c] = std::move(new_value_node);
+    } else {
+      copy_trie.root_ = new_value_node;
+    }
     return copy_trie;
   }
 
@@ -99,22 +104,29 @@ auto Trie::Put(std::string_view key, T value) const -> Trie {
     copy_cursor = copy_cursor -> children_.at(c);
   }
 
-  char last_c = key[key.size() - 1];
-  //auto children = cursor -> children_;
-  //auto copy_children = copy_cursor -> children_;
-  if (cursor == nullptr || cursor -> children_.find(last_c) == cursor -> children_.end()) {
-    // Not find, create a new value node
-    auto new_node = std::make_shared<TrieNodeWithValue<T>>(shared_value);
-    const_cast<TrieNode *>(copy_cursor.get())->children_[last_c] = std::move(new_node);
+  if (!key.empty()) {
+    char last_c = key[key.size() - 1];
+    //auto children = cursor -> children_;
+    //auto copy_children = copy_cursor -> children_;
+    if (cursor == nullptr || cursor -> children_.find(last_c) == cursor -> children_.end()) {
+      // Not find, create a new value node
+      auto new_node = std::make_shared<TrieNodeWithValue<T>>(shared_value);
+      const_cast<TrieNode *>(copy_cursor.get())->children_[last_c] = std::move(new_node);
+    } else {
+      // Find the node, update its value
+      auto copy_children = const_cast<TrieNode *>(cursor.get())->children_[last_c]->children_;
+      auto copy_node = std::make_shared<const TrieNodeWithValue<T>>(copy_children, shared_value);
+      // hezhang TODO: value_node?
+      const_cast<TrieNode *>(copy_cursor.get())->children_[last_c] = std::move(copy_node);
+    }
   } else {
-    // Find the node, update its value
-    auto copy_children = const_cast<TrieNode *>(cursor.get())->children_[last_c]->children_;
+    auto copy_children = const_cast<TrieNode *>(cursor.get())->children_;
     auto copy_node = std::make_shared<const TrieNodeWithValue<T>>(copy_children, shared_value);
-    // hezhang TODO: value_node?
-    const_cast<TrieNode *>(copy_cursor.get())->children_[last_c] = std::move(copy_node);
+    copy_trie.root_ = copy_node;
   }
   return copy_trie;
 }
+
 
 auto Trie::Remove(std::string_view key) const -> Trie {
   throw NotImplementedException("Trie::Remove is not implemented.");
