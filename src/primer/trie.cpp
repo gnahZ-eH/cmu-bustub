@@ -2,6 +2,7 @@
 #include <memory>
 #include <string_view>
 #include <utility>
+#include <vector>
 #include "common/exception.h"
 
 namespace bustub {
@@ -85,8 +86,6 @@ auto Trie::Put(std::string_view key, T value) const -> Trie {
 
   for (int i = 0; i < static_cast<int>(key.size() - 1); i++) {
     char c = key[i];
-    //auto children = cursor -> children_;
-    //auto copy_children = copy_cursor -> children_;
 
     if (cursor == nullptr || cursor -> children_.find(c) == cursor -> children_.end()) {
       // Not find, create a new node
@@ -106,8 +105,6 @@ auto Trie::Put(std::string_view key, T value) const -> Trie {
 
   if (!key.empty()) {
     char last_c = key[key.size() - 1];
-    //auto children = cursor -> children_;
-    //auto copy_children = copy_cursor -> children_;
     if (cursor == nullptr || cursor -> children_.find(last_c) == cursor -> children_.end()) {
       // Not find, create a new value node
       auto new_node = std::make_shared<TrieNodeWithValue<T>>(shared_value);
@@ -129,10 +126,59 @@ auto Trie::Put(std::string_view key, T value) const -> Trie {
 
 
 auto Trie::Remove(std::string_view key) const -> Trie {
-  throw NotImplementedException("Trie::Remove is not implemented.");
+  Trie copy_trie;
+  if (root_ == nullptr) {
+    copy_trie = Trie();
+    return copy_trie;
+  }
 
-  // You should walk through the trie and remove nodes if necessary. If the node doesn't contain a value any more,
-  // you should convert it to `TrieNode`. If a node doesn't have children any more, you should remove it.
+  copy_trie = Trie(root_->Clone());
+  if (key.empty()) {
+    copy_trie.root_ = std::make_shared<TrieNode>(copy_trie.root_->children_);
+  }
+
+  auto cur = copy_trie.root_;
+  
+  std::vector<std::shared_ptr<const TrieNode>> stack;
+  stack.push_back(cur);
+  for (int i = 0; i < static_cast<int>(key.size() - 1); i++) {
+    char c = key[i];
+    if (cur->children_.find(c) != cur->children_.end()) {
+      stack.push_back(cur->children_.at(c));
+      cur = cur->children_.at(c);
+    } else {
+      cur = nullptr;
+      break;
+    }
+  }
+
+  char last_char = key[key.size() - 1];
+  if (cur == nullptr || cur->children_.find(last_char) == cur->children_.end()) {
+    return copy_trie;
+  }
+
+  auto stack_size = stack.size();
+  // find the leaf node, TrieNodeWithValue->TrieNode
+  auto copy_children = const_cast<TrieNode *>(cur.get())->children_[last_char]->children_;
+  if (!copy_children.empty()) {
+    auto copy_node = std::make_shared<const TrieNode>(copy_children);
+  
+    const_cast<TrieNode *>(stack[stack_size - 1].get())->children_[last_char] = copy_node;
+    return copy_trie;
+  }
+
+  for (int i = stack_size - 1; i >= 0; i--) {
+    auto child_node = const_cast<TrieNode *>(stack[i].get())->children_[key[i]];
+
+    if (child_node->is_value_node_) {
+      break;
+    }
+
+    if (child_node->children_.empty()) {
+      const_cast<TrieNode *>(stack[i].get())->children_.erase(key[i]);
+    }
+  }
+  return copy_trie;
 }
 
 // Below are explicit instantiation of template functions.
