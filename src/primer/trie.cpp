@@ -134,7 +134,11 @@ auto Trie::Remove(std::string_view key) const -> Trie {
 
   copy_trie = Trie(root_->Clone());
   if (key.empty()) {
-    copy_trie.root_ = std::make_shared<TrieNode>(copy_trie.root_->children_);
+    //copy_trie.root_ = std::make_shared<TrieNode>(copy_trie.root_->children_);
+    if (copy_trie.root_->is_value_node_) {
+      copy_trie.root_ = nullptr;
+    }
+    return copy_trie;
   }
 
   auto cur = copy_trie.root_;
@@ -167,6 +171,9 @@ auto Trie::Remove(std::string_view key) const -> Trie {
     return copy_trie;
   }
 
+  // set leaf node to non-value node
+  const_cast<TrieNode *>(cur.get())->children_[last_char] = std::make_shared<const TrieNode>();
+
   for (int i = stack_size - 1; i >= 0; i--) {
     auto child_node = const_cast<TrieNode *>(stack[i].get())->children_[key[i]];
 
@@ -177,6 +184,9 @@ auto Trie::Remove(std::string_view key) const -> Trie {
     if (child_node->children_.empty()) {
       const_cast<TrieNode *>(stack[i].get())->children_.erase(key[i]);
     }
+  }
+  if (copy_trie.root_->children_.empty()) {
+    copy_trie.root_ = nullptr;
   }
   return copy_trie;
 }
