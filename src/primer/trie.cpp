@@ -22,14 +22,13 @@ auto Trie::Get(std::string_view key) const -> const T * {
   std::shared_ptr<const TrieNode> cur = root_;
 
   for (char c : key) {
-    auto children = cur->children_;
-    if (children.find(c) == children.end()) {
+    if (cur->children_.find(c) == cur->children_.end()) {
       return nullptr;
     }
-    cur = children[c];
+    cur = cur->children_.at(c);
   }
 
-  if (!(cur->is_value_node_)) {
+  if (cur == nullptr || !(cur->is_value_node_)) {
     return nullptr;
   }
 
